@@ -1,0 +1,11 @@
+{
+  "urls": [
+    ["maxm10/__init__.py", "maxm10/__init__.py"],
+    ["maxm10/config.py", "maxm10/config.py"],
+    ["maxm10/device.py", "maxm10/device.py"],
+    ["maxm10/keys.py", "maxm10/keys.py"],
+    ["maxm10/monitor.py", "maxm10/monitor.py"],
+    ["maxm10/ubx.py", "maxm10/ubx.py"]
+  ],
+  "version": "0.1.0"
+}

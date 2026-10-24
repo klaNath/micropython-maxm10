@@ -1,0 +1,44 @@
+# Simple monitor to check a configured module: GGA and AssistNow Autonomous status
+import time
+
+_GGA_QUALITY = {b'0': 'nofix', b'1': 'GNSS', b'2': 'DGNSS(SBAS/SLAS)', b'6': 'DR'}
+
+def format_status(gnss):
+    s = '[status]'
+    if gnss.aop:
+        s += ' aop enabled=%d busy=%d' % gnss.aop
+    if gnss.sat:
+        s += (' sv tracked={tracked} used={used} eph={eph} aop={aop} aop_used={aop_used}'
+              ' sbas={sbas_used} slas={slas_used}').format(**gnss.sat)
+    if gnss.nav_status:
+        st = gnss.nav_status
+        s += ' ttff=%.1fs uptime=%ds' % (st['ttff_ms'] / 1000, st['msss_ms'] // 1000)
+    return s
+
+def print_gga(line):
+    if line[3:6] == b'GGA':
+        f = line.split(b',')
+        if len(f) > 8:
+            q = _GGA_QUALITY.get(f[6], f[6].decode())
+            print('  %-10s q=%-17s sats=%2s hdop=%s' % (f[1].decode(), q, f[7].decode(), f[8].decode()))
+    elif line[3:6] == b'TXT':
+        print('  ' + line.decode().strip())
+
+def monitor(gnss, seconds=600, status_interval_s=10):
+    # Prints GGA / TXT and polls the status every status_interval_s
+    prev = gnss.on_nmea
+    gnss.on_nmea = print_gga
+    try:
+        t0 = time.ticks_ms()
+        t_status = time.ticks_add(t0, -status_interval_s * 1000)
+        while time.ticks_diff(time.ticks_ms(), t0) < seconds * 1000:
+            if time.ticks_diff(time.ticks_ms(), t_status) >= status_interval_s * 1000:
+                t_status = time.ticks_ms()
+                gnss.poll_aop()
+                gnss.poll_sat()
+                gnss.poll_nav_status()
+                print(format_status(gnss))
+            if not gnss.update():
+                time.sleep_ms(5)
+    finally:
+        gnss.on_nmea = prev
