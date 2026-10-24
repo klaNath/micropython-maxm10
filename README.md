@@ -11,7 +11,7 @@ RP2350 + MAX-M10M-00B で動作確認しています。
 ## インストール
 
 ```
-mpremote mip install github:<user>/micropython-maxm10
+mpremote mip install github:klaNath/micropython-maxm10
 ```
 
 または `maxm10/` をボードの `/lib/maxm10/` へコピーします。
