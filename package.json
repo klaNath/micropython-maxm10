@@ -7,5 +7,6 @@
     ["maxm10/monitor.py", "maxm10/monitor.py"],
     ["maxm10/ubx.py", "maxm10/ubx.py"]
   ],
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "license": "MIT"
 }

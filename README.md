@@ -80,3 +80,7 @@ python tests/test_host.py
 - MAX-M10M-00B Data sheet (UBX-22028884)
 - MAX-M10M-00B Integration manual (UBX-22038241)
 - u-blox M10 SPG 5.10 Interface description (UBX-21035062)
+
+## ライセンス
+
+MIT License(`LICENSE` を参照)。
