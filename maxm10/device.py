@@ -46,6 +46,7 @@ class MaxM10:
         self.sat = None        # NAV-SAT: dict of satellite counts
         self.splitter = ubx.Splitter(self._dispatch_nmea, self._dispatch_ubx)
         self._wait = None
+        self._wait_msg = True
         self._resp = None
         if resetn is not None:
             Pin(resetn, Pin.IN) # A Low pulse of 1ms or more clears BBR
@@ -102,7 +103,12 @@ class MaxM10:
             if key == w:
                 self._resp = ('msg', p)
             elif cls == 0x05 and len(p) >= 2 and p[0] == w[0] and p[1] == w[1]:
-                self._resp = ('ack' if mid == 0x01 else 'nak', p)
+                # A poll is answered by the message and then ACK, so an ACK may belong to the
+                # previous poll of the same message: accept only NAK when waiting for a message
+                if mid == 0x00:
+                    self._resp = ('nak', p)
+                elif not self._wait_msg:
+                    self._resp = ('ack', p)
         if self.on_ubx:
             self.on_ubx(cls, mid, p)
 
@@ -111,10 +117,15 @@ class MaxM10:
         # Sends a UBX message without waiting (a polled response arrives via on_ubx / caches)
         self.uart.write(ubx.frame(cls, mid, payload))
 
-    def request(self, cls, mid, payload=b'', timeout_ms=1500):
-        # Sends a UBX message and waits for the message (cls, id) or ACK/NAK for it.
+    def request(self, cls, mid, payload=b'', timeout_ms=1500, expect_msg=True):
+        # Sends a UBX message and waits for the response.
+        #   expect_msg=True : message (cls, id) or NAK (polls such as CFG-VALGET, MON-VER)
+        #   expect_msg=False: ACK or NAK (commands such as CFG-VALSET)
         # Returns ('msg' | 'ack' | 'nak', payload) or (None, None) on timeout.
+        while self.update(): # dispatch what has already arrived
+            pass
         self._wait = (cls, mid)
+        self._wait_msg = expect_msg
         self._resp = None
         try:
             self.send(cls, mid, payload)
@@ -149,7 +160,7 @@ class MaxM10:
     def valset(self, items, layers=LAYERS_DEFAULT, timeout_ms=1500):
         # items: list of (key, value). Returns True: ACK, False: NAK, None: timeout
         p = ubx.valset_payload([(key_id(k), v) for k, v in items], layers)
-        kind, _ = self.request(ubx.CFG_VALSET[0], ubx.CFG_VALSET[1], p, timeout_ms)
+        kind, _ = self.request(ubx.CFG_VALSET[0], ubx.CFG_VALSET[1], p, timeout_ms, expect_msg=False)
         return None if kind is None else kind == 'ack'
 
     def valget(self, keys, layer=ubx.GET_RAM, timeout_ms=1500):
